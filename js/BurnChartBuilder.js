@@ -147,7 +147,7 @@
                 var series = tscResults.series;
                 var chartConfiguration = {
                     chart:{
-                        defaultSeriesType:'column',
+                        defaultSeriesType:'area',
                         zoomType: 'xy'
                     },
                     credits:{

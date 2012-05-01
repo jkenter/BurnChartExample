@@ -18,13 +18,22 @@ Ext.define('BurnChartApp', {
             height: '100%',
             topLevelModel: 'PortfolioItem',
             childModelTypeForRecordFn: function(record){
-                if(record.get('Children') && record.get('Children').length > 0){
-                    return 'Portfolio Item';
-                }
+            	//if there are user stories, this is a portfolio item
+            	if(record.get('UserStories') && record.get('UserStories').length > 0) {
+            		return 'User Story';
+            	} else if(record.get('Children') && record.get('Children').length > 0){
+                    return 'PortfolioItem';
+                } 
             },
             parentAttributeForChildRecordFn: function(record){
-                if(record.get('Children') && record.get('Children').length > 0){
+                if(record.get('PortfolioItemType') && record.get('Parent')){
                     return 'Parent';
+                } else if (record.get('PortfolioItemType') && record.get('PortfolioItem')){
+                	return 'PortfolioItem';
+                } else if(record.get('Parent')){
+                	return 'Parent';
+                } else if(record.get('PortfolioItem')){
+                	return 'PortfolioItem';
                 }
             },
             listeners: {

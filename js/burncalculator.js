@@ -91,7 +91,7 @@
           f = '$sum';
           field = 'Accepted';
           yAxis = 1;
-          type = 'column';
+          type = 'area';
           break;
         case 'scope':
           name = "Scope (" + config.upSeriesType + ")";
