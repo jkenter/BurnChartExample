@@ -21,11 +21,11 @@
                     mixins:{
                         componentUpdatable:'Rally.util.ComponentUpdatable'
                     },
-                    build:function (requestedQuery, chartTitle, buildFinishedCallback) {
-            
+                    build:function (requestedQuery, chartTitle, startDate, endDate, buildFinishedCallback) {
+                    	this.endTime = endDate;
                         this.chartTitle = chartTitle;
                         this.buildFinishedCallback = buildFinishedCallback;
-                        this.startTime = requestedQuery.find._ValidFrom.$gte; //TODO: better way to get/set this
+                        this.startTime = startDate;
                         this.query = {
                             find:Ext.encode(requestedQuery.find),
                             pagesize:10000
@@ -77,7 +77,7 @@
                     _getScheduleStateOid:function (state, reqName) {
                         var workspace = Rally.util.Ref.getOidFromRef(Rally.environment.getContext().context.scope.workspace._ref);
                         var project = Rally.util.Ref.getOidFromRef(Rally.environment.getContext().context.scope.project._ref);
-                        var analyticsScheduleStateQuery = "find={ScheduleState:'" + state + "',Project:" + project + "}&fields=['ScheduleState']&pagesize=1";
+                        var analyticsScheduleStateQuery = "find={ScheduleState:'" + state + "'}&fields=['ScheduleState']&pagesize=1";
                         Ext.Ajax.request({
                             url:"https://rally1.rallydev.com/analytics/1.27/" + workspace + "/artifact/snapshot/query.js?" + analyticsScheduleStateQuery,
                             method:"GET",
@@ -117,7 +117,7 @@
                                 WorkDays:'Sunday,Monday,Tuesday,Wednesday,Thursday,Friday'
                                 // They work on Sundays
                             };
-            
+                            
                             var acceptedStates = [];
                             if( this.scheduleStateOidAccepted ){
                                 acceptedStates.push( this.scheduleStateOidAccepted );
@@ -137,6 +137,7 @@
             
                                 acceptedStates:acceptedStates,
                                 start:this.startTime,
+                                end:this.endTime,
                                 // Calculated either by inspecting results or via configuration. pastEnd is automatically the last date in results
                                 holidays:[
                                     {
@@ -301,14 +302,11 @@
                 },
             
                 launch: function () {
-                    this.startTime = '2012-03-01T00:00:00Z';
                     this.chartQuery = {
                         find:{
                             _Type:'HierarchicalRequirement',
                             Children:null,
-                            _ValidFrom: {
-                                $gte: this.startTime
-                            }
+                            _ItemHierarchy: 12231
                         }
                     };
             
@@ -355,14 +353,46 @@
                     var treeRowRecord = treeItem.getRecord();
                     var itemId = treeRowRecord.get('ObjectID');
                     var title = treeRowRecord.get('FormattedID') + ' - ' + treeRowRecord.get('Name');
-                    this._refreshChart(treeRowRecord, itemId, title);
+                    var startDateObj = treeRowRecord.get('ActualStartDate');
+                    startDateObj = startDateObj ? startDateObj : treeRowRecord.get('PlannedStartDate');
+                    if (!startDateObj) {
+                    	alert('The start date is not set for this item');
+                    	return;
+                    }
+                    var startYear = this._addZeroToDateIfNeeded(startDateObj.getUTCFullYear());
+                    var startMonth = this._addZeroToDateIfNeeded(startDateObj.getUTCMonth()+1);
+                    var startDay = this._addZeroToDateIfNeeded(startDateObj.getUTCDate());
+                    
+                    var startDate = startYear + "-" + startMonth + "-" + startDay + "T00:00:00Z";
+                    var endDateObj = treeRowRecord.get('PlannedEndDate');
+                    var endDate;
+                    if (endDateObj){
+                    	var endYear = endDateObj.getUTCFullYear();
+                    	var endMonth = this._addZeroToDateIfNeeded(endDateObj.getUTCMonth()+1);            
+                    	var endDay = this._addZeroToDateIfNeeded(endDateObj.getUTCDate());
+                        
+                    	endDate = endYear + "-" + endMonth + "-" + endDay + "T00:00:00Z";
+                    	console.log("endDate = " + endDate);
+                    }
+                    else {
+                    	console.log("Planned End Date does not exist!");
+                    }
+                    console.log('startDate: ' + startDate);
+                    this._refreshChart(treeRowRecord, itemId, title, startDate, endDate);
+                },
+                
+                _addZeroToDateIfNeeded: function(dateValue) {
+                	if (dateValue.toString().length < 2){
+                		dateValue = "0" + dateValue;
+                    }
+                	return dateValue;
                 },
             
-                _refreshChart: function(treeRowRecord, itemId, title) {
+                _refreshChart: function(treeRowRecord, itemId, title, startDate, endDate) {
                     this.selectedRowRecord = treeRowRecord;
                     this.chartQuery.find._ItemHierarchy = itemId;
                     this.down('#chartCmp').getEl().mask('Loading...');
-                    this.chartConfigBuilder.build(this.chartQuery, title, Ext.bind(this._afterChartConfigBuilt, this));
+                    this.chartConfigBuilder.build(this.chartQuery, title, startDate, endDate, Ext.bind(this._afterChartConfigBuilt, this));
                 }
             });
 

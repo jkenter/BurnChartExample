@@ -68,14 +68,11 @@ Ext.define('BurnChartApp', {
     },
 
     launch: function () {
-        this.startTime = '2012-03-01T00:00:00Z';
         this.chartQuery = {
             find:{
                 _Type:'HierarchicalRequirement',
                 Children:null,
-                _ValidFrom: {
-                    $gte: this.startTime
-                }
+                _ItemHierarchy: 12231
             }
         };
 
@@ -122,13 +119,45 @@ Ext.define('BurnChartApp', {
         var treeRowRecord = treeItem.getRecord();
         var itemId = treeRowRecord.get('ObjectID');
         var title = treeRowRecord.get('FormattedID') + ' - ' + treeRowRecord.get('Name');
-        this._refreshChart(treeRowRecord, itemId, title);
+        var startDateObj = treeRowRecord.get('ActualStartDate');
+        startDateObj = startDateObj ? startDateObj : treeRowRecord.get('PlannedStartDate');
+        if (!startDateObj) {
+        	alert('The start date is not set for this item');
+        	return;
+        }
+        var startYear = this._addZeroToDateIfNeeded(startDateObj.getUTCFullYear());
+        var startMonth = this._addZeroToDateIfNeeded(startDateObj.getUTCMonth()+1);
+        var startDay = this._addZeroToDateIfNeeded(startDateObj.getUTCDate());
+        
+        var startDate = startYear + "-" + startMonth + "-" + startDay + "T00:00:00Z";
+        var endDateObj = treeRowRecord.get('PlannedEndDate');
+        var endDate;
+        if (endDateObj){
+        	var endYear = endDateObj.getUTCFullYear();
+        	var endMonth = this._addZeroToDateIfNeeded(endDateObj.getUTCMonth()+1);            
+        	var endDay = this._addZeroToDateIfNeeded(endDateObj.getUTCDate());
+            
+        	endDate = endYear + "-" + endMonth + "-" + endDay + "T00:00:00Z";
+        	console.log("endDate = " + endDate);
+        }
+        else {
+        	console.log("Planned End Date does not exist!");
+        }
+        console.log('startDate: ' + startDate);
+        this._refreshChart(treeRowRecord, itemId, title, startDate, endDate);
+    },
+    
+    _addZeroToDateIfNeeded: function(dateValue) {
+    	if (dateValue.toString().length < 2){
+    		dateValue = "0" + dateValue;
+        }
+    	return dateValue;
     },
 
-    _refreshChart: function(treeRowRecord, itemId, title) {
+    _refreshChart: function(treeRowRecord, itemId, title, startDate, endDate) {
         this.selectedRowRecord = treeRowRecord;
         this.chartQuery.find._ItemHierarchy = itemId;
         this.down('#chartCmp').getEl().mask('Loading...');
-        this.chartConfigBuilder.build(this.chartQuery, title, Ext.bind(this._afterChartConfigBuilt, this));
+        this.chartConfigBuilder.build(this.chartQuery, title, startDate, endDate, Ext.bind(this._afterChartConfigBuilt, this));
     }
 });

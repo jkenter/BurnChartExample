@@ -4,11 +4,11 @@
         mixins:{
             componentUpdatable:'Rally.util.ComponentUpdatable'
         },
-        build:function (requestedQuery, chartTitle, buildFinishedCallback) {
-
+        build:function (requestedQuery, chartTitle, startDate, endDate, buildFinishedCallback) {
+        	this.endTime = endDate;
             this.chartTitle = chartTitle;
             this.buildFinishedCallback = buildFinishedCallback;
-            this.startTime = requestedQuery.find._ValidFrom.$gte; //TODO: better way to get/set this
+            this.startTime = startDate;
             this.query = {
                 find:Ext.encode(requestedQuery.find),
                 pagesize:10000
@@ -60,7 +60,7 @@
         _getScheduleStateOid:function (state, reqName) {
             var workspace = Rally.util.Ref.getOidFromRef(Rally.environment.getContext().context.scope.workspace._ref);
             var project = Rally.util.Ref.getOidFromRef(Rally.environment.getContext().context.scope.project._ref);
-            var analyticsScheduleStateQuery = "find={ScheduleState:'" + state + "',Project:" + project + "}&fields=['ScheduleState']&pagesize=1";
+            var analyticsScheduleStateQuery = "find={ScheduleState:'" + state + "'}&fields=['ScheduleState']&pagesize=1";
             Ext.Ajax.request({
                 url:"https://rally1.rallydev.com/analytics/1.27/" + workspace + "/artifact/snapshot/query.js?" + analyticsScheduleStateQuery,
                 method:"GET",
@@ -100,7 +100,7 @@
                     WorkDays:'Sunday,Monday,Tuesday,Wednesday,Thursday,Friday'
                     // They work on Sundays
                 };
-
+                
                 var acceptedStates = [];
                 if( this.scheduleStateOidAccepted ){
                     acceptedStates.push( this.scheduleStateOidAccepted );
@@ -120,6 +120,7 @@
 
                     acceptedStates:acceptedStates,
                     start:this.startTime,
+                    end:this.endTime,
                     // Calculated either by inspecting results or via configuration. pastEnd is automatically the last date in results
                     holidays:[
                         {
